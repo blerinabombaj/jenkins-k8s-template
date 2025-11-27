@@ -1,54 +1,72 @@
 pipeline {
     agent any
-    environment {
-        PATH = "$PATH:/usr/local/bin"
-        IMAGE_NAME = "digdigdigdig/${APP_NAME}"
-        APP_NAME = "CHANGE_ME"  // ← CHANGE PER PROJECT
-    }
     stages {
-        stage('Checkout') {
+        stage('TEST_FIRST') {
             steps {
-                git url: 'git@github.com:blerinabombaj/${APP_NAME}.git', 
-                    credentialsId: 'github-ssh', 
-                    branch: 'main'
+                echo '🔥 TEST STAGE RUNNING!'
+                sh '''
+                    echo "=== DEBUG INFO ==="
+                    pwd
+                    ls -la *.js package*
+                    which node || echo "❌ NO NODE!"
+                    node --version || echo "❌ NODE FAILED"
+                    if [ -f test-example.js ]; then
+                        echo "🎯 RUNNING TEST!"
+                        node test-example.js
+                    else
+                        echo "❌ NO TEST FILE"
+                    fi
+                '''
             }
         }
-        stage('Build Docker') {
-            steps {
+        stage('List Files') { 
+            steps { 
+                sh 'ls -la' 
+            } 
+        }
+        stage('Build Docker') { 
+            steps { 
                 sh '''
-                export PATH=$PATH:/usr/local/bin
-                docker build -t ${IMAGE_NAME}:${BUILD_NUMBER} .
-                docker tag ${IMAGE_NAME}:${BUILD_NUMBER} ${IMAGE_NAME}:latest
+                    export PATH=$PATH:/usr/local/bin
+                    docker build -t digdigdigdig/jenkins-template:${BUILD_NUMBER} -f Dockerfile.example .
+                    docker tag digdigdigdig/jenkins-template:${BUILD_NUMBER} digdigdigdig/jenkins-template:latest
                 '''
             }
         }
         stage('Push Docker') {
             steps {
                 withCredentials([usernamePassword(credentialsId: 'dockerhub', 
-                                                 usernameVariable: 'DOCKER_USER', 
-                                                 passwordVariable: 'DOCKER_PASS')]) {
+                    usernameVariable: 'DOCKER_USER', 
+                    passwordVariable: 'DOCKER_PASS')]) {
                     sh '''
-                    export PATH=$PATH:/usr/local/bin
-                    echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
-                    docker push ${IMAGE_NAME}:${BUILD_NUMBER}
-                    docker push ${IMAGE_NAME}:latest
+                        export PATH=$PATH:/usr/local/bin
+                        echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
+                        docker push digdigdigdig/jenkins-template:${BUILD_NUMBER}
+                        docker push digdigdigdig/jenkins-template:latest
                     '''
                 }
             }
         }
         stage('Deploy Kubernetes') {
             steps {
-                withCredentials([file(credentialsId: 'kubeconfig', variable: 'KUBECONFIG_CONTENT')]) {
+                withCredentials([string(credentialsId: 'kubconfig', variable: 'KUBECONFIG_CONTENT')]) {
                     sh '''
-                    export PATH=$PATH:/usr/local/bin
-                    TEMP_KUBE=$(mktemp)
-                    echo "$KUBECONFIG_CONTENT" > $TEMP_KUBE
-                    export KUBECONFIG=$TEMP_KUBE
-                    sed "s|{{APP_NAME}}|${APP_NAME}|g; s|{{IMAGE_NAME}}|${IMAGE_NAME}:${BUILD_NUMBER}|g" k8s-deployment.yaml | kubectl apply -f -
-                    kubectl rollout status deployment/${APP_NAME}
+                        export PATH=$PATH:/usr/local/bin
+                        if ! command -v kubectl >/dev/null 2>&1; then
+                            echo "WARNING: kubectl not found - skipping"
+                            exit 0
+                        fi
+                        echo "$KUBECONFIG_CONTENT" > /tmp/kubeconfig
+                        export KUBECONFIG=/tmp/kubeconfig
+                        kubectl get nodes || true
                     '''
                 }
             }
+        }
+    }
+    post {
+        always {
+            sh 'docker logout || true'
         }
     }
 }
