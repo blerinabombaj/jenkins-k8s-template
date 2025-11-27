@@ -1,5 +1,11 @@
 pipeline {
     agent any
+    tools {
+        nodejs 'nodejs-18'  // Make sure this matches the NodeJS tool name in Jenkins global config
+    }
+    environment {
+        PATH = "${tool 'nodejs-18'}/bin:${env.PATH}"
+    }
     stages {
         stage('TEST_FIRST') {
             steps {
@@ -19,13 +25,13 @@ pipeline {
                 '''
             }
         }
-        stage('List Files') { 
-            steps { 
-                sh 'ls -la' 
-            } 
+        stage('List Files') {
+            steps {
+                sh 'ls -la'
+            }
         }
-        stage('Build Docker') { 
-            steps { 
+        stage('Build Docker') {
+            steps {
                 sh '''
                     export PATH=$PATH:/usr/local/bin
                     docker build -t digdigdigdig/jenkins-template:${BUILD_NUMBER} -f Dockerfile.example .
@@ -35,9 +41,7 @@ pipeline {
         }
         stage('Push Docker') {
             steps {
-                withCredentials([usernamePassword(credentialsId: 'dockerhub', 
-                    usernameVariable: 'DOCKER_USER', 
-                    passwordVariable: 'DOCKER_PASS')]) {
+                withCredentials([usernamePassword(credentialsId: 'dockerhub', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
                     sh '''
                         export PATH=$PATH:/usr/local/bin
                         echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
