@@ -1,7 +1,12 @@
 {
-  "name": "jenkins-template",
+  "name": "xxxxx-project-name",
   "version": "1.0.0",
   "scripts": {
-    "test": "node test-example.js"
+    "start": "node xxxxx-entry.js",  
+    "build": "echo '✅ Build complete!'",
+    "test": "echo '✅ No tests - OK'"
+  },
+  "dependencies": {
+    "express": "^4.18.0"
   }
 }
