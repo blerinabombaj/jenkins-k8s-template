@@ -2,11 +2,16 @@
   "name": "xxxxx-project-name",
   "version": "1.0.0",
   "scripts": {
-    "start": "node xxxxx-entry.js",  
+    "start": "node app-with-metrics.js",
+    "dev": "nodemon app-with-metrics.js",
     "build": "echo '✅ Build complete!'",
     "test": "echo '✅ No tests - OK'"
   },
   "dependencies": {
-    "express": "^4.18.0"
+    "express": "^4.18.0",
+    "prom-client": "^5.0.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.0"
   }
 }
